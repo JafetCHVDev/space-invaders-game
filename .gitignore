@@ -1,0 +1,33 @@
+# Rust/Cargo
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Soroban
+*.wasm
+
+# Node.js
+node_modules/
+dist/
+*.log
+.npm
+.cache
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Test snapshots (if needed, remove this line)
+test_snapshots/

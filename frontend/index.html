@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Space Invaders - Classic arcade action! No downloads, play instantly in your browser.">
+  <meta name="theme-color" content="#0a0a1a">
+  <title>🚀 SPACE INVADERS</title>
+  <link rel="stylesheet" href="src/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <!-- Loading Overlay -->
+  <div id="loading-overlay">
+    <div class="loading-content">
+      <div class="arcade-loader">
+        <div class="alien alien-1">👾</div>
+        <div class="alien alien-2">👾</div>
+        <div class="alien alien-3">👾</div>
+      </div>
+      <p id="loading-text">LOADING...</p>
+    </div>
+  </div>
+
+  <!-- Username Modal -->
+  <div id="username-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-alien">👾</div>
+      <h2>ENTER YOUR NAME</h2>
+      <p class="modal-subtitle">Choose your pilot callsign</p>
+      <input type="text" id="username-input" maxlength="16" placeholder="PILOT_NAME" autocomplete="off"
+        spellcheck="false">
+      <button id="btn-save-username" class="btn-arcade">START MISSION</button>
+    </div>
+  </div>
+
+  <div id="app">
+    <header>
+      <h1>SPACE INVADERS</h1>
+      <div id="player-info">
+        <span id="player-name">PILOT: ---</span>
+      </div>
+    </header>
+
+    <main>
+      <div id="game-container">
+        <div id="game-wrapper">
+          <canvas id="game-canvas" width="800" height="600"></canvas>
+
+          <!-- Fullscreen button -->
+          <button id="btn-fullscreen" class="btn-icon" title="Fullscreen">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+            </svg>
+          </button>
+        </div>
+
+        <div id="game-hud">
+          <div class="hud-item">
+            <span class="hud-label">SCORE</span>
+            <span class="hud-value" id="score">00000</span>
+          </div>
+          <div class="hud-item hud-center">
+            <button id="btn-start" class="btn-arcade pulse">INSERT COIN</button>
+          </div>
+          <div class="hud-item">
+            <span class="hud-label">LIVES</span>
+            <span class="hud-value" id="lives">🚀🚀🚀</span>
+          </div>
+        </div>
+
+        <div id="controls-help">
+          <kbd>←</kbd><kbd>→</kbd> MOVE
+          <span class="separator">•</span>
+          <kbd>SPACE</kbd> FIRE
+          <span class="separator">•</span>
+          <kbd>F</kbd> FULLSCREEN
+        </div>
+      </div>
+
+      <div id="leaderboard">
+        <h2>🏆 HIGH SCORES</h2>
+        <ol id="leaderboard-list">
+          <li class="loading"><span>CONNECTING...</span><span></span></li>
+        </ol>
+        <button id="btn-submit-score" class="btn-secondary" disabled>
+          📤 SUBMIT SCORE
+        </button>
+      </div>
+    </main>
+
+    <footer>
+      <p class="credits">© 2026 SPACE INVADERS • ARCADE EDITION</p>
+    </footer>
+  </div>
+
+  <script type="module" src="src/main.ts"></script>
+</body>
+
+</html>

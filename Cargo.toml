@@ -1,0 +1,11 @@
+[workspace]
+resolver = "2"
+members = ["contracts/game"]
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+debug = 0
+strip = "symbols"
+lto = true
+panic = "abort"
