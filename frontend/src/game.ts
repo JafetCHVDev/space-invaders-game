@@ -75,7 +75,6 @@ interface GameState {
 }
 
 export class SpaceInvadersGame {
-    private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private state: GameState;
     private animationId: number | null = null;
@@ -92,7 +91,6 @@ export class SpaceInvadersGame {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
         if (!canvas) throw new Error(`Canvas #${canvasId} not found`);
 
-        this.canvas = canvas;
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Could not get 2D context");
 

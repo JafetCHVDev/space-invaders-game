@@ -237,10 +237,14 @@ if (submitScoreBtn) {
 
             if (success) {
                 console.log(`🔗 Score submitted to blockchain: ${score}`);
-                alert(`🏆 SCORE SUBMITTED TO BLOCKCHAIN!\n\nPilot: ${currentUsername}\nScore: ${score}\n${won ? "🎉 VICTORY!" : ""}`);
+                alert(`🏆 SCORE SUBMITTED TO BLOCKCHAIN!\n\nPilot: ${currentUsername}\nScore: ${score}\n${won ? "🎉 VICTORY!" : ""}\n\n⏳ Leaderboard will update in a few seconds...`);
 
-                // Refresh leaderboard
-                await loadLeaderboard();
+                // Wait for blockchain confirmation before refreshing leaderboard
+                // This gives time for the transaction to be processed
+                setTimeout(async () => {
+                    console.log("🔄 Refreshing leaderboard after delay...");
+                    await loadLeaderboard();
+                }, 5000); // 5 second delay for blockchain confirmation
             } else {
                 alert("Failed to submit score. Please try again.");
             }

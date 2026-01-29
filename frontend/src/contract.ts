@@ -700,9 +700,9 @@ export async function submitScore(score: number): Promise<boolean> {
         const prepared = await server.prepareTransaction(tx);
         console.log("  → Transaction prepared, submitting...");
 
-        // Wait for confirmation to ensure score is registered before updating leaderboard
-        await signAndSubmit(prepared, false);
-        console.log("  ✅ submitScore confirmed!");
+        // Fire-and-forget for instant UX - the leaderboard will refresh after a delay
+        await signAndSubmit(prepared, true);
+        console.log("  🚀 submitScore submitted (fire-and-forget)!");
 
         return true;
     } catch (error) {
