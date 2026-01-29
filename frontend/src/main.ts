@@ -217,6 +217,22 @@ if (submitScoreBtn) {
         submitScoreBtn.textContent = "📤 SUBMITTING...";
 
         try {
+            // First, ensure player is registered on-chain
+            const registered = await isPlayerRegistered();
+            if (!registered) {
+                console.log("🔄 Player not registered on-chain, registering now...");
+                submitScoreBtn.textContent = "🔗 REGISTERING...";
+                const regSuccess = await registerPlayer(currentUsername);
+                if (!regSuccess) {
+                    alert("Failed to register player on-chain. Please try again.");
+                    submitScoreBtn.textContent = "📤 SUBMIT SCORE";
+                    submitScoreBtn.disabled = false;
+                    return;
+                }
+                console.log("✅ Player registered successfully!");
+            }
+
+            submitScoreBtn.textContent = "📤 SUBMITTING...";
             const success = await contractSubmitScore(score);
 
             if (success) {
@@ -226,7 +242,7 @@ if (submitScoreBtn) {
                 // Refresh leaderboard
                 await loadLeaderboard();
             } else {
-                alert("Failed to submit score. Are you registered?");
+                alert("Failed to submit score. Please try again.");
             }
         } catch (error) {
             console.error("Submit score error:", error);

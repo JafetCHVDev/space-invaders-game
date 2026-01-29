@@ -646,9 +646,9 @@ export async function registerPlayer(username: string): Promise<boolean> {
         const prepared = await server.prepareTransaction(tx);
         console.log("  → Transaction prepared, submitting...");
 
-        // Fire-and-forget: don't wait for confirmation
-        await signAndSubmit(prepared, true);
-        console.log("  ✅ registerPlayer submitted!");
+        // Wait for confirmation to ensure player is registered before submitting scores
+        await signAndSubmit(prepared, false);
+        console.log("  ✅ registerPlayer confirmed!");
 
         return true;
     } catch (error) {
@@ -667,6 +667,14 @@ export async function submitScore(score: number): Promise<boolean> {
 
         const wallet = await getOrCreateWallet();
         console.log("  → Wallet:", wallet.publicKey);
+
+        // Check if player is registered before submitting score
+        const isRegistered = await isPlayerRegistered();
+        if (!isRegistered) {
+            console.warn("  ⚠️ Player not registered on-chain. Score submission will fail.");
+            console.warn("  → Please register first by saving a username.");
+            return false;
+        }
 
         const account = await server.getAccount(wallet.publicKey);
         console.log("  → Account sequence:", account.sequenceNumber());
@@ -692,9 +700,9 @@ export async function submitScore(score: number): Promise<boolean> {
         const prepared = await server.prepareTransaction(tx);
         console.log("  → Transaction prepared, submitting...");
 
-        // Fire-and-forget: instant UX, confirmation happens in background
-        await signAndSubmit(prepared, true);
-        console.log("  ✅ submitScore submitted!");
+        // Wait for confirmation to ensure score is registered before updating leaderboard
+        await signAndSubmit(prepared, false);
+        console.log("  ✅ submitScore confirmed!");
 
         return true;
     } catch (error) {
