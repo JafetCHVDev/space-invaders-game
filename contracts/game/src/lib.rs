@@ -493,14 +493,36 @@ impl SpaceInvadersContract {
 
         env.storage().persistent().set(&player_key, &player_data);
 
-        // Update leaderboard
+        // Update leaderboard - remove existing entry for this player first
         let mut leaderboard: Vec<LeaderboardEntry> = env
             .storage()
             .persistent()
             .get(&DataKey::Leaderboard)
             .unwrap_or(Vec::new(&env));
 
-        // Create new leaderboard entry
+        // Find and remove existing entry for this player (if any)
+        let mut existing_score: u32 = 0;
+        let mut filtered_leaderboard = Vec::new(&env);
+        for i in 0..leaderboard.len() {
+            let existing = leaderboard.get(i).unwrap();
+            if existing.player == player {
+                existing_score = existing.score;
+                // Skip this entry (remove it)
+            } else {
+                filtered_leaderboard.push_back(existing);
+            }
+        }
+
+        // Only update leaderboard if new score is higher than previous
+        if score <= existing_score {
+            // Score not improved, keep old entry
+            env.storage()
+                .persistent()
+                .set(&DataKey::Leaderboard, &leaderboard);
+            return true;
+        }
+
+        // Create new leaderboard entry with higher score
         let entry = LeaderboardEntry {
             username: player_data.username.clone(),
             player: player.clone(),
@@ -508,12 +530,12 @@ impl SpaceInvadersContract {
             timestamp: env.ledger().timestamp(),
         };
 
-        // Find position and insert if in top 10
+        // Insert new entry in sorted position
         let mut inserted = false;
         let mut new_leaderboard = Vec::new(&env);
 
-        for i in 0..leaderboard.len() {
-            let existing = leaderboard.get(i).unwrap();
+        for i in 0..filtered_leaderboard.len() {
+            let existing = filtered_leaderboard.get(i).unwrap();
 
             if !inserted && score > existing.score {
                 new_leaderboard.push_back(entry.clone());
