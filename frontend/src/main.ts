@@ -284,11 +284,33 @@ async function loadLeaderboard() {
             return;
         }
 
-        list.innerHTML = entries
-            .map((e: LeaderboardEntry) => `<li><span>${e.username.toUpperCase()}</span><span>${e.score.toLocaleString()}</span></li>`)
+        // Aggregate scores: SUM all scores per username
+        const scoreByUsername = new Map<string, { username: string; totalScore: number }>();
+        for (const entry of entries) {
+            const normalizedUsername = entry.username.toUpperCase();
+            const existing = scoreByUsername.get(normalizedUsername);
+            if (existing) {
+                // Add to existing total
+                existing.totalScore += entry.score;
+            } else {
+                // First entry for this user
+                scoreByUsername.set(normalizedUsername, {
+                    username: entry.username,
+                    totalScore: entry.score,
+                });
+            }
+        }
+
+        // Convert to array, sort by total score descending, take top 10
+        const aggregatedEntries = Array.from(scoreByUsername.values())
+            .sort((a, b) => b.totalScore - a.totalScore)
+            .slice(0, 10);
+
+        list.innerHTML = aggregatedEntries
+            .map((e) => `<li><span>${e.username.toUpperCase()}</span><span>${e.totalScore.toLocaleString()}</span></li>`)
             .join("");
 
-        console.log(`📊 Loaded ${entries.length} leaderboard entries from blockchain`);
+        console.log(`📊 Loaded ${entries.length} entries, showing ${aggregatedEntries.length} unique players with cumulative scores`);
     } catch (error) {
         console.error("Error loading leaderboard:", error);
         list.innerHTML = '<li class="loading"><span>BLOCKCHAIN UNAVAILABLE</span><span></span></li>';
