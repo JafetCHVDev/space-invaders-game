@@ -552,7 +552,6 @@ export async function isWalletReady(): Promise<boolean> {
 }
 
 // ========== PLAYER & LEADERBOARD FUNCTIONS ==========
-
 /**
  * Leaderboard entry from contract
  */
@@ -563,51 +562,145 @@ export interface LeaderboardEntry {
     timestamp: number;
 }
 
+// ===== LEADERBOARD CACHE =====
+interface LeaderboardCache {
+    entries: LeaderboardEntry[];
+    timestamp: number;
+    isRefreshing: boolean;
+}
+
+const LEADERBOARD_CACHE_TTL = 30000; // 30 seconds
+let leaderboardCache: LeaderboardCache | null = null;
+
 /**
- * Get the global leaderboard from contract
+ * Fetch leaderboard from blockchain (internal - no cache)
  */
-export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+async function fetchLeaderboardFromChain(): Promise<LeaderboardEntry[]> {
+    const wallet = await getOrCreateWallet();
+    let account: Account;
+
     try {
-        const wallet = await getOrCreateWallet();
-        let account: Account;
-
-        try {
-            account = await server.getAccount(wallet.publicKey);
-        } catch {
-            // If wallet not funded, use a dummy source for simulation
-            console.log("Wallet not funded, returning empty leaderboard");
-            return [];
-        }
-
-        const contract = new Contract(CONTRACT_ID);
-
-        const tx = new TransactionBuilder(account, {
-            fee: BASE_FEE,
-            networkPassphrase: NETWORK_PASSPHRASE,
-        })
-            .addOperation(contract.call("get_leaderboard"))
-            .setTimeout(30)
-            .build();
-
-        const result = await server.simulateTransaction(tx);
-
-        if ("result" in result && result.result) {
-            const rawEntries = scValToNative(result.result.retval) as any[];
-
-            // Transform the entries to match our interface
-            return rawEntries.map((entry: any) => ({
-                username: entry.username || "Unknown",
-                player: entry.player || "",
-                score: Number(entry.score) || 0,
-                timestamp: Number(entry.timestamp) || 0,
-            }));
-        }
-
-        return [];
-    } catch (error) {
-        console.error("Error getting leaderboard:", error);
+        account = await server.getAccount(wallet.publicKey);
+    } catch {
+        console.log("Wallet not funded, returning empty leaderboard");
         return [];
     }
+
+    const contract = new Contract(CONTRACT_ID);
+
+    const tx = new TransactionBuilder(account, {
+        fee: BASE_FEE,
+        networkPassphrase: NETWORK_PASSPHRASE,
+    })
+        .addOperation(contract.call("get_leaderboard"))
+        .setTimeout(30)
+        .build();
+
+    const result = await server.simulateTransaction(tx);
+
+    if ("result" in result && result.result) {
+        const rawEntries = scValToNative(result.result.retval) as any[];
+
+        return rawEntries.map((entry: any) => ({
+            username: entry.username || "Unknown",
+            player: entry.player || "",
+            score: Number(entry.score) || 0,
+            timestamp: Number(entry.timestamp) || 0,
+        }));
+    }
+
+    return [];
+}
+
+/**
+ * Get the global leaderboard from contract (with caching)
+ * Returns cached data immediately if available, refreshes in background if stale
+ */
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+    const now = Date.now();
+
+    // If we have a valid cache, return it immediately
+    if (leaderboardCache && (now - leaderboardCache.timestamp) < LEADERBOARD_CACHE_TTL) {
+        console.log("📊 Returning cached leaderboard");
+        return leaderboardCache.entries;
+    }
+
+    // If cache exists but is stale, return stale data and refresh in background
+    if (leaderboardCache && !leaderboardCache.isRefreshing) {
+        console.log("📊 Returning stale cache, refreshing in background...");
+        leaderboardCache.isRefreshing = true;
+
+        // Background refresh
+        fetchLeaderboardFromChain()
+            .then(entries => {
+                leaderboardCache = {
+                    entries,
+                    timestamp: Date.now(),
+                    isRefreshing: false,
+                };
+                console.log("📊 Leaderboard cache refreshed");
+            })
+            .catch(error => {
+                console.error("Background refresh failed:", error);
+                if (leaderboardCache) leaderboardCache.isRefreshing = false;
+            });
+
+        return leaderboardCache.entries;
+    }
+
+    // No cache or first load - fetch synchronously
+    try {
+        console.log("📊 Fetching leaderboard from blockchain...");
+        const entries = await fetchLeaderboardFromChain();
+
+        leaderboardCache = {
+            entries,
+            timestamp: Date.now(),
+            isRefreshing: false,
+        };
+
+        return entries;
+    } catch (error) {
+        console.error("Error getting leaderboard:", error);
+        return leaderboardCache?.entries || [];
+    }
+}
+
+/**
+ * Force refresh the leaderboard cache
+ */
+export async function refreshLeaderboard(): Promise<LeaderboardEntry[]> {
+    console.log("🔄 Force refreshing leaderboard...");
+    try {
+        const entries = await fetchLeaderboardFromChain();
+        leaderboardCache = {
+            entries,
+            timestamp: Date.now(),
+            isRefreshing: false,
+        };
+        return entries;
+    } catch (error) {
+        console.error("Error refreshing leaderboard:", error);
+        return leaderboardCache?.entries || [];
+    }
+}
+
+/**
+ * Add an optimistic entry to the cache (for instant UI feedback)
+ */
+export function addOptimisticScore(username: string, score: number): void {
+    if (!leaderboardCache) return;
+
+    // Add the new entry optimistically
+    const optimisticEntry: LeaderboardEntry = {
+        username,
+        player: "",
+        score,
+        timestamp: Date.now(),
+    };
+
+    leaderboardCache.entries = [...leaderboardCache.entries, optimisticEntry];
+    console.log("📊 Added optimistic score to cache");
 }
 
 /**

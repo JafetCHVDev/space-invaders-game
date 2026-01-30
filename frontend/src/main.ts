@@ -4,15 +4,16 @@
  */
 
 import "./styles.css";
-import { SpaceInvadersGame } from "./game";
+import { SpaceInvadersGame, DifficultyLevel, DIFFICULTY_PRESETS } from "./game";
 import {
     getOrCreateWallet,
     ensureWalletFunded,
     getLeaderboard,
+    refreshLeaderboard,
+    addOptimisticScore,
     registerPlayer,
     submitScore as contractSubmitScore,
     isPlayerRegistered,
-    LeaderboardEntry,
 } from "./contract";
 
 // DOM Elements
@@ -21,6 +22,9 @@ const loadingText = document.getElementById("loading-text") as HTMLElement;
 const usernameModal = document.getElementById("username-modal") as HTMLElement;
 const usernameInput = document.getElementById("username-input") as HTMLInputElement;
 const saveUsernameBtn = document.getElementById("btn-save-username") as HTMLButtonElement;
+const difficultyModal = document.getElementById("difficulty-modal") as HTMLElement;
+const difficultyBtns = document.querySelectorAll(".difficulty-btn") as NodeListOf<HTMLButtonElement>;
+const difficultyBadge = document.getElementById("difficulty-badge") as HTMLElement;
 const playerNameSpan = document.getElementById("player-name") as HTMLSpanElement;
 const startBtn = document.getElementById("btn-start") as HTMLButtonElement;
 const submitScoreBtn = document.getElementById("btn-submit-score") as HTMLButtonElement;
@@ -30,6 +34,7 @@ const livesDisplay = document.getElementById("lives") as HTMLElement;
 
 // LocalStorage keys
 const USERNAME_KEY = "space_invaders_username";
+const DIFFICULTY_KEY = "space_invaders_difficulty";
 
 // Game instance
 let game: SpaceInvadersGame | null = null;
@@ -71,22 +76,41 @@ function storeUsername(username: string) {
     localStorage.setItem(USERNAME_KEY, username);
 }
 
-// ===== INITIALIZATION =====
-async function init() {
-    showLoading("INITIALIZING...");
-    console.log("🎮 Space Invaders Arcade - Starting...");
-
-    // Initialize wallet in background (frictionless)
-    try {
-        showLoading("CONNECTING...");
-        await getOrCreateWallet();
-        await ensureWalletFunded();
-    } catch (error) {
-        console.error("Wallet init error:", error);
+// ===== DIFFICULTY MODAL =====
+function showDifficultyModal() {
+    if (difficultyModal) {
+        difficultyModal.classList.remove("hidden");
     }
+}
 
-    // Initialize game
-    game = new SpaceInvadersGame("game-canvas");
+function hideDifficultyModal() {
+    if (difficultyModal) {
+        difficultyModal.classList.add("hidden");
+    }
+}
+
+function getStoredDifficulty(): DifficultyLevel | null {
+    return localStorage.getItem(DIFFICULTY_KEY) as DifficultyLevel | null;
+}
+
+function storeDifficulty(difficulty: DifficultyLevel) {
+    localStorage.setItem(DIFFICULTY_KEY, difficulty);
+}
+
+function updateDifficultyBadge(difficulty: DifficultyLevel) {
+    if (!difficultyBadge) return;
+
+    const config = DIFFICULTY_PRESETS[difficulty];
+    difficultyBadge.textContent = config.label;
+    difficultyBadge.className = `difficulty-badge ${difficulty}`;
+}
+
+function initializeGame(difficulty: DifficultyLevel) {
+    storeDifficulty(difficulty);
+    updateDifficultyBadge(difficulty);
+
+    // Create game with selected difficulty
+    game = new SpaceInvadersGame("game-canvas", difficulty);
 
     game.onScoreChange = (score) => {
         if (scoreDisplay) {
@@ -104,24 +128,54 @@ async function init() {
         console.log(`🎮 ${won ? "Victory!" : "Game Over"} Score: ${finalScore}`);
         if (submitScoreBtn) submitScoreBtn.disabled = false;
 
-        // Update start button
         if (startBtn) {
             startBtn.textContent = "PLAY AGAIN";
             startBtn.classList.add("pulse");
         }
     };
 
+    // Update lives display for this difficulty
+    const config = DIFFICULTY_PRESETS[difficulty];
+    if (livesDisplay) {
+        livesDisplay.textContent = "🚀".repeat(config.playerLives);
+    }
+
+    console.log(`🎮 Game initialized with ${config.label} difficulty`);
+}
+
+// ===== INITIALIZATION =====
+async function init() {
+    showLoading("INITIALIZING...");
+    console.log("🎮 Space Invaders Arcade - Starting...");
+
+    // Initialize wallet in background (frictionless)
+    try {
+        showLoading("CONNECTING...");
+        await getOrCreateWallet();
+        await ensureWalletFunded();
+    } catch (error) {
+        console.error("Wallet init error:", error);
+    }
+
     // Check for existing username
     currentUsername = getStoredUsername();
+
+    // Check for stored difficulty
+    const storedDifficulty = getStoredDifficulty();
 
     hideLoading();
 
     if (!currentUsername) {
         // First time player - show username modal
         showUsernameModal();
-    } else {
-        // Returning player
+    } else if (!storedDifficulty) {
+        // Has username but no difficulty - show difficulty modal
         updatePlayerDisplay(currentUsername);
+        showDifficultyModal();
+    } else {
+        // Returning player with all settings
+        updatePlayerDisplay(currentUsername);
+        initializeGame(storedDifficulty);
         enableGame();
     }
 
@@ -173,7 +227,9 @@ if (saveUsernameBtn && usernameInput) {
         storeUsername(username);
         updatePlayerDisplay(username);
         hideUsernameModal();
-        enableGame();
+
+        // Show difficulty modal for new players
+        showDifficultyModal();
 
         saveUsernameBtn.disabled = false;
         saveUsernameBtn.textContent = "START MISSION";
@@ -189,10 +245,31 @@ if (saveUsernameBtn && usernameInput) {
     });
 }
 
-// Start game
+// Difficulty buttons
+difficultyBtns.forEach(btn => {
+    btn.onclick = () => {
+        const difficulty = btn.dataset.difficulty as DifficultyLevel;
+        if (!difficulty) return;
+
+        hideDifficultyModal();
+        initializeGame(difficulty);
+        enableGame();
+
+        console.log(`🎯 Difficulty selected: ${difficulty.toUpperCase()}`);
+    };
+});
+
 if (startBtn) {
     startBtn.onclick = () => {
-        if (!game) return;
+        if (!game) {
+            // Game not initialized, show difficulty modal
+            if (!currentUsername) {
+                showUsernameModal();
+            } else {
+                showDifficultyModal();
+            }
+            return;
+        }
         if (!currentUsername) {
             showUsernameModal();
             return;
@@ -237,14 +314,19 @@ if (submitScoreBtn) {
 
             if (success) {
                 console.log(`🔗 Score submitted to blockchain: ${score}`);
-                alert(`🏆 SCORE SUBMITTED TO BLOCKCHAIN!\n\nPilot: ${currentUsername}\nScore: ${score}\n${won ? "🎉 VICTORY!" : ""}\n\n⏳ Leaderboard will update in a few seconds...`);
 
-                // Wait for blockchain confirmation before refreshing leaderboard
-                // This gives time for the transaction to be processed
+                // Add optimistic score to cache for instant UI update
+                addOptimisticScore(currentUsername, score);
+                await loadLeaderboard(); // Show optimistic update immediately
+
+                alert(`🏆 SCORE SUBMITTED TO BLOCKCHAIN!\n\nPilot: ${currentUsername}\nScore: ${score}\n${won ? "🎉 VICTORY!" : ""}\n\n⏳ Leaderboard will refresh momentarily...`);
+
+                // Force refresh after blockchain confirmation
                 setTimeout(async () => {
-                    console.log("🔄 Refreshing leaderboard after delay...");
+                    console.log("🔄 Force refreshing leaderboard after blockchain confirmation...");
+                    await refreshLeaderboard();
                     await loadLeaderboard();
-                }, 5000); // 5 second delay for blockchain confirmation
+                }, 5000);
             } else {
                 alert("Failed to submit score. Please try again.");
             }

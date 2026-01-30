@@ -41,11 +41,43 @@
     </div>
   </div>
 
+  <!-- Difficulty Selection Modal -->
+  <div id="difficulty-modal" class="modal hidden">
+    <div class="modal-content difficulty-modal-content">
+      <div class="modal-alien">🎮</div>
+      <h2>SELECT DIFFICULTY</h2>
+      <p class="modal-subtitle">Choose your challenge level</p>
+      <div class="difficulty-grid">
+        <button class="difficulty-btn difficulty-easy" data-difficulty="easy">
+          <span class="diff-label">EASY</span>
+          <span class="diff-desc">5 lives • Slow enemies</span>
+          <span class="diff-mult">×0.5 score</span>
+        </button>
+        <button class="difficulty-btn difficulty-normal" data-difficulty="normal">
+          <span class="diff-label">NORMAL</span>
+          <span class="diff-desc">3 lives • Classic mode</span>
+          <span class="diff-mult">×1.0 score</span>
+        </button>
+        <button class="difficulty-btn difficulty-hard" data-difficulty="hard">
+          <span class="diff-label">HARD</span>
+          <span class="diff-desc">2 lives • Fast enemies</span>
+          <span class="diff-mult">×1.5 score</span>
+        </button>
+        <button class="difficulty-btn difficulty-extreme" data-difficulty="extreme">
+          <span class="diff-label">⚠️ EXTREME ⚠️</span>
+          <span class="diff-desc">1 life • NO MERCY</span>
+          <span class="diff-mult">×3.0 score</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="app">
     <header>
       <h1>SPACE INVADERS</h1>
       <div id="player-info">
         <span id="player-name">PILOT: ---</span>
+        <span id="difficulty-badge" class="difficulty-badge hidden">NORMAL</span>
       </div>
     </header>
 
