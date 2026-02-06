@@ -11,7 +11,7 @@ echo "🚀 Configurando repositorio remoto..."
 
 # Si el repo ya existe, solo configura labels y milestones
 # Si no existe, crear el repo (omitir si ya lo creaste manualmente)
-# gh repo create "$OWNER/$REPO_NAME" --public --description "Space Invaders on Stellar Soroban - Drips Wave"
+# gh repo create \"$OWNER/$REPO_NAME\" --public --description \"Space Invaders on Stellar Soroban\"
 
 echo "🏷️ Creando labels..."
 gh label create "bug" --color "d73a4a" --description "Something isn't working" --force 2>/dev/null || true
@@ -26,7 +26,7 @@ gh label create "priority:high" --color "b60205" --description "High priority" -
 echo "🎯 Creando milestone MVP..."
 gh api repos/"$OWNER/$REPO_NAME"/milestones \
   -f title="Wave MVP" \
-  -f description="Minimum Viable Product for Drips Wave submission" \
+  -f description="Minimum Viable Product submission" \
   -f state="open" 2>/dev/null || echo "Milestone may already exist"
 
 echo "📝 Creando issues..."

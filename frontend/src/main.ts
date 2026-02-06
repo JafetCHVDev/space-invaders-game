@@ -223,6 +223,10 @@ if (submitScoreBtn) {
                 console.log(`🔗 Score submitted to blockchain: ${score}`);
                 alert(`🏆 SCORE SUBMITTED TO BLOCKCHAIN!\n\nPilot: ${currentUsername}\nScore: ${score}\n${won ? "🎉 VICTORY!" : ""}`);
 
+                // Wait for blockchain confirmation before refreshing leaderboard
+                submitScoreBtn.textContent = "⏳ CONFIRMING...";
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
                 // Refresh leaderboard
                 await loadLeaderboard();
             } else {

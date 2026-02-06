@@ -2,8 +2,6 @@
 
 > A classic Space Invaders game with on-chain state powered by [Soroban](https://soroban.stellar.org/) smart contracts on the Stellar network.
 
-**Built for [Drips Wave](https://drips.network/) hackathon.**
-
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/JafetCHVDev/space-invaders-game)
 [![Stellar](https://img.shields.io/badge/Stellar-Testnet-blue)](https://stellar.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)

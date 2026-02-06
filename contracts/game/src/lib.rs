@@ -461,11 +461,12 @@ impl SpaceInvadersContract {
     }
     
     /// Submit a score to the leaderboard
-    /// Updates player's high score if new score is higher
+    /// ACCUMULATES scores - each game adds to the player's total
+    /// Maintains only ONE entry per player (unique username)
     /// 
     /// # Arguments
     /// * `player` - Player's wallet address
-    /// * `score` - Final game score to submit
+    /// * `score` - Game score to ADD to total
     pub fn submit_score(env: Env, player: Address, score: u32) -> bool {
         player.require_auth();
         
@@ -480,35 +481,43 @@ impl SpaceInvadersContract {
         // Update games played
         player_data.games_played += 1;
         
-        // Update high score if new score is higher
-        if score > player_data.high_score {
-            player_data.high_score = score;
-        }
+        // ACCUMULATE score - add new score to high_score (which is now total_score)
+        player_data.high_score += score;
         
         env.storage().persistent().set(&player_key, &player_data);
         
-        // Update leaderboard
+        // Update leaderboard - maintain UNIQUE entries per player
         let mut leaderboard: Vec<LeaderboardEntry> = env.storage()
             .persistent()
             .get(&DataKey::Leaderboard)
             .unwrap_or(Vec::new(&env));
         
-        // Create new leaderboard entry
+        // First, remove any existing entry for this player
+        let mut filtered_leaderboard = Vec::new(&env);
+        for i in 0..leaderboard.len() {
+            let existing = leaderboard.get(i).unwrap();
+            // Skip if this is the same player (by address)
+            if existing.player != player {
+                filtered_leaderboard.push_back(existing);
+            }
+        }
+        
+        // Create entry with player's TOTAL SCORE (accumulated)
         let entry = LeaderboardEntry {
             username: player_data.username.clone(),
             player: player.clone(),
-            score,
+            score: player_data.high_score, // This is now total accumulated score
             timestamp: env.ledger().timestamp(),
         };
         
-        // Find position and insert if in top 10
-        let mut inserted = false;
+        // Insert in correct position by score (sorted descending)
         let mut new_leaderboard = Vec::new(&env);
+        let mut inserted = false;
         
-        for i in 0..leaderboard.len() {
-            let existing = leaderboard.get(i).unwrap();
+        for i in 0..filtered_leaderboard.len() {
+            let existing = filtered_leaderboard.get(i).unwrap();
             
-            if !inserted && score > existing.score {
+            if !inserted && entry.score > existing.score {
                 new_leaderboard.push_back(entry.clone());
                 inserted = true;
             }
