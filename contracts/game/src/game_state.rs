@@ -1,5 +1,5 @@
 //! Game state structures for Space Invaders
-//! 
+//!
 //! This module defines all the data structures needed to represent
 //! the game state on-chain using Soroban's storage.
 //!
@@ -60,7 +60,7 @@ impl EntityPosition {
     pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
-    
+
     /// Convert to cougr-core Position for ECS integration
     pub fn to_cougr_position(&self) -> CougrPosition {
         CougrPosition {
@@ -68,7 +68,7 @@ impl EntityPosition {
             y: self.y as u32,
         }
     }
-    
+
     /// Create from cougr-core Position
     pub fn from_cougr_position(pos: &CougrPosition) -> Self {
         Self {
@@ -93,7 +93,7 @@ impl Velocity {
     pub fn new(dx: i32, dy: i32) -> Self {
         Self { dx, dy }
     }
-    
+
     /// Apply velocity to a position (movement system pattern)
     pub fn apply_to(&self, pos: &mut EntityPosition) {
         pos.x += self.dx;
@@ -116,7 +116,7 @@ impl Health {
     pub fn new(max: u32) -> Self {
         Self { current: max, max }
     }
-    
+
     pub fn take_damage(&mut self, amount: u32) {
         if self.current > amount {
             self.current -= amount;
@@ -124,7 +124,7 @@ impl Health {
             self.current = 0;
         }
     }
-    
+
     pub fn is_alive(&self) -> bool {
         self.current > 0
     }
@@ -154,12 +154,12 @@ impl Invader {
             active: true,
         }
     }
-    
+
     /// Get X position (convenience accessor)
     pub fn x(&self) -> i32 {
         self.position.x
     }
-    
+
     /// Get Y position (convenience accessor)
     pub fn y(&self) -> i32 {
         self.position.y
@@ -187,27 +187,27 @@ impl Bullet {
             active: true,
         }
     }
-    
+
     /// Create a player bullet (moves up)
     pub fn player_bullet(x: i32, y: i32) -> Self {
         Self::new(x, y, -1)
     }
-    
+
     /// Create an enemy bullet (moves down)
     pub fn enemy_bullet(x: i32, y: i32) -> Self {
         Self::new(x, y, 1)
     }
-    
+
     /// Update bullet position using velocity component
     pub fn update(&mut self) {
         self.velocity.apply_to(&mut self.position);
     }
-    
+
     /// Get X position (convenience accessor)
     pub fn x(&self) -> i32 {
         self.position.x
     }
-    
+
     /// Get Y position (convenience accessor)
     pub fn y(&self) -> i32 {
         self.position.y
@@ -263,22 +263,22 @@ impl GameState {
             shoot_cooldown: 0,
         }
     }
-    
+
     /// Get ship X position (backwards compatibility)
     pub fn ship_x(&self) -> i32 {
         self.ship.position.x
     }
-    
+
     /// Set ship X position (backwards compatibility)
     pub fn set_ship_x(&mut self, x: i32) {
         self.ship.position.x = x;
     }
-    
+
     /// Get remaining lives
     pub fn lives(&self) -> u32 {
         self.ship.health.current
     }
-    
+
     /// Take damage (lose a life)
     pub fn take_damage(&mut self) {
         self.ship.health.take_damage(1);
@@ -372,4 +372,3 @@ pub struct LeaderboardEntry {
 pub const MAX_LEADERBOARD_SIZE: u32 = 10;
 /// Maximum username length
 pub const MAX_USERNAME_LENGTH: u32 = 16;
-

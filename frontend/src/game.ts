@@ -30,6 +30,73 @@ const COLORS = {
     explosion: "#ff6600",
 };
 
+// ===== DIFFICULTY SYSTEM =====
+export type DifficultyLevel = "easy" | "normal" | "hard" | "extreme";
+
+export interface DifficultyConfig {
+    label: string;
+    description: string;
+    playerLives: number;
+    invaderSpeed: number;           // px per move
+    invaderMoveInterval: number;    // ticks between moves
+    enemyShootInterval: number;     // ticks between enemy shots
+    enemyBulletSpeed: number;       // px per tick
+    playerBulletSpeed: number;      // px per tick
+    maxPlayerBullets: number;       // concurrent bullets allowed
+    scoreMultiplier: number;        // bonus multiplier
+}
+
+export const DIFFICULTY_PRESETS: Record<DifficultyLevel, DifficultyConfig> = {
+    easy: {
+        label: "EASY",
+        description: "For beginners - More lives, slower enemies",
+        playerLives: 5,
+        invaderSpeed: 8,
+        invaderMoveInterval: 35,
+        enemyShootInterval: 80,
+        enemyBulletSpeed: 4,
+        playerBulletSpeed: 14,
+        maxPlayerBullets: 5,
+        scoreMultiplier: 0.5,
+    },
+    normal: {
+        label: "NORMAL",
+        description: "Classic arcade experience",
+        playerLives: 3,
+        invaderSpeed: 15,
+        invaderMoveInterval: 25,
+        enemyShootInterval: 50,
+        enemyBulletSpeed: 6,
+        playerBulletSpeed: 12,
+        maxPlayerBullets: 3,
+        scoreMultiplier: 1.0,
+    },
+    hard: {
+        label: "HARD",
+        description: "Fast and aggressive enemies",
+        playerLives: 2,
+        invaderSpeed: 22,
+        invaderMoveInterval: 18,
+        enemyShootInterval: 30,
+        enemyBulletSpeed: 9,
+        playerBulletSpeed: 12,
+        maxPlayerBullets: 3,
+        scoreMultiplier: 1.5,
+    },
+    extreme: {
+        label: "EXTREME",
+        description: "ONE LIFE. NO MERCY. PURE CHAOS.",
+        playerLives: 1,
+        invaderSpeed: 35,
+        invaderMoveInterval: 10,
+        enemyShootInterval: 15,
+        enemyBulletSpeed: 15,
+        playerBulletSpeed: 10,
+        maxPlayerBullets: 2,
+        scoreMultiplier: 3.0,
+    },
+};
+
 // Game state interfaces
 interface Ship {
     x: number;
@@ -75,7 +142,6 @@ interface GameState {
 }
 
 export class SpaceInvadersGame {
-    private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private state: GameState;
     private animationId: number | null = null;
@@ -83,20 +149,25 @@ export class SpaceInvadersGame {
     private tickInterval: number = 40; // Faster game loop
     private keys: Set<string> = new Set();
 
+    // Difficulty configuration
+    private difficulty: DifficultyLevel;
+    private config: DifficultyConfig;
+
     // Callbacks
     public onScoreChange?: (score: number) => void;
     public onLivesChange?: (lives: number) => void;
     public onGameOver?: (score: number, won: boolean) => void;
 
-    constructor(canvasId: string) {
+    constructor(canvasId: string, difficulty: DifficultyLevel = "normal") {
         const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
         if (!canvas) throw new Error(`Canvas #${canvasId} not found`);
 
-        this.canvas = canvas;
         const ctx = canvas.getContext("2d");
         if (!ctx) throw new Error("Could not get 2D context");
 
         this.ctx = ctx;
+        this.difficulty = difficulty;
+        this.config = DIFFICULTY_PRESETS[difficulty];
         this.state = this.createInitialState();
 
         this.bindControls();
@@ -142,7 +213,7 @@ export class SpaceInvadersGame {
             bullets: [],
             particles: [],
             score: 0,
-            lives: 3,
+            lives: this.config.playerLives,
             gameOver: false,
             won: false,
             invaderDirection: 1,
@@ -185,7 +256,7 @@ export class SpaceInvadersGame {
 
     private shoot() {
         const playerBullets = this.state.bullets.filter(b => b.isPlayer && b.active);
-        if (playerBullets.length >= 3) return;
+        if (playerBullets.length >= this.config.maxPlayerBullets) return;
 
         this.state.bullets.push({
             x: this.state.ship.x + SHIP_WIDTH / 2 - BULLET_WIDTH / 2,
@@ -260,7 +331,7 @@ export class SpaceInvadersGame {
         // Move bullets
         this.state.bullets.forEach(bullet => {
             if (!bullet.active) return;
-            bullet.y += bullet.isPlayer ? -12 : 6;
+            bullet.y += bullet.isPlayer ? -this.config.playerBulletSpeed : this.config.enemyBulletSpeed;
 
             if (bullet.y < 0 || bullet.y > CANVAS_HEIGHT) {
                 bullet.active = false;
@@ -271,7 +342,7 @@ export class SpaceInvadersGame {
         this.checkCollisions();
 
         // Move invaders
-        if (this.state.tick % 25 === 0) {
+        if (this.state.tick % this.config.invaderMoveInterval === 0) {
             this.moveInvaders();
         }
 
@@ -283,7 +354,7 @@ export class SpaceInvadersGame {
         }
 
         // Enemy shooting
-        if (this.state.tick % 50 === 0) {
+        if (this.state.tick % this.config.enemyShootInterval === 0) {
             this.enemyShoot();
         }
 
@@ -314,8 +385,8 @@ export class SpaceInvadersGame {
                     bullet.active = false;
                     invader.active = false;
 
-                    // Score based on type
-                    const points = invader.type === "squid" ? 30 : invader.type === "crab" ? 20 : 10;
+                    const basePoints = invader.type === "squid" ? 30 : invader.type === "crab" ? 20 : 10;
+                    const points = Math.floor(basePoints * this.config.scoreMultiplier);
                     this.state.score += points;
                     this.onScoreChange?.(this.state.score);
 
@@ -356,7 +427,7 @@ export class SpaceInvadersGame {
 
         this.state.invaders.forEach(invader => {
             if (!invader.active) return;
-            const newX = invader.x + this.state.invaderDirection * 15;
+            const newX = invader.x + this.state.invaderDirection * this.config.invaderSpeed;
             if (newX <= 0 || newX >= CANVAS_WIDTH - INVADER_WIDTH) {
                 shouldDescend = true;
             }
@@ -367,7 +438,7 @@ export class SpaceInvadersGame {
             if (shouldDescend) {
                 invader.y += 25;
             } else {
-                invader.x += this.state.invaderDirection * 15;
+                invader.x += this.state.invaderDirection * this.config.invaderSpeed;
             }
 
             if (invader.y >= this.state.ship.y - 30) {
@@ -580,5 +651,13 @@ export class SpaceInvadersGame {
 
     public didWin(): boolean {
         return this.state.won;
+    }
+
+    public getDifficulty(): DifficultyLevel {
+        return this.difficulty;
+    }
+
+    public getDifficultyConfig(): DifficultyConfig {
+        return this.config;
     }
 }
